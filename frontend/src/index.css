@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-arena-bg text-white font-sans;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-arena-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-arena-border rounded-full;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold px-6 py-3 rounded-lg
+           hover:from-amber-400 hover:to-amber-500 transition-all duration-200
+           active:scale-95 shadow-lg shadow-amber-500/20;
+  }
+
+  .btn-disabled {
+    @apply bg-arena-border text-arena-muted font-bold px-6 py-3 rounded-lg cursor-not-allowed;
+  }
+
+  .card {
+    @apply bg-arena-surface border border-arena-border rounded-xl p-6;
+  }
+
+  .badge-easy {
+    @apply bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs font-mono uppercase;
+  }
+  .badge-medium {
+    @apply bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded text-xs font-mono uppercase;
+  }
+  .badge-hard {
+    @apply bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs font-mono uppercase;
+  }
+
+  .live-dot {
+    @apply w-2 h-2 rounded-full bg-arena-teal animate-pulse-live inline-block;
+  }
+
+  .winner-banner {
+    @apply bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10
+           border border-amber-500/30 rounded-lg p-4;
+  }
+
+  .champion-banner {
+    @apply bg-gradient-to-r from-amber-600/20 via-amber-500/30 to-amber-600/20
+           border-2 border-amber-500/50 rounded-xl p-8 text-center;
+  }
+}
+
+/* CodeMirror overrides */
+.cm-editor {
+  height: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+}
+
+.cm-editor .cm-scroller {
+  overflow: auto;
+}
+
+/* Marked markdown styling */
+.analysis-content h2 {
+  @apply text-xl font-bold text-amber-400 mt-6 mb-3;
+}
+.analysis-content p {
+  @apply text-gray-300 mb-3 leading-relaxed;
+}
+.analysis-content code {
+  @apply bg-arena-bg px-1.5 py-0.5 rounded text-amber-300 font-mono text-sm;
+}
+.analysis-content pre {
+  @apply bg-arena-bg rounded-lg p-4 my-4 overflow-x-auto;
+}
+.analysis-content pre code {
+  @apply bg-transparent p-0;
+}
+.analysis-content ul {
+  @apply list-disc list-inside mb-3 text-gray-300;
+}
+.analysis-content strong {
+  @apply text-white font-semibold;
+}

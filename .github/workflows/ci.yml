@@ -1,0 +1,121 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [api, ws-server, sandbox-runner, ladder-scheduler]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.package }}/package.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ matrix.package }}
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+        working-directory: ${{ matrix.package }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install API dependencies
+        run: npm install
+        working-directory: api
+
+      - name: Run tests
+        run: npx vitest run --reporter=verbose
+        working-directory: api
+        env:
+          JWT_SECRET: test-secret-for-ci
+          DATABASE_URL: postgres://test:test@localhost:5432/test
+
+  build-images:
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        service: [api, ws-server, sandbox-runner, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t $ECR_REGISTRY/codegladiator-${{ matrix.service }}:${{ github.sha }} ./${{ matrix.service }}
+          docker push $ECR_REGISTRY/codegladiator-${{ matrix.service }}:${{ github.sha }}
+          docker tag $ECR_REGISTRY/codegladiator-${{ matrix.service }}:${{ github.sha }} $ECR_REGISTRY/codegladiator-${{ matrix.service }}:latest
+          docker push $ECR_REGISTRY/codegladiator-${{ matrix.service }}:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: |
+          terraform init
+          terraform apply -auto-approve \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="anthropic_api_key=${{ secrets.ANTHROPIC_API_KEY }}"
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name codegladiator-dev --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/
+          kubectl -n codegladiator rollout restart deployment/api
+          kubectl -n codegladiator rollout restart deployment/ws-server
+          kubectl -n codegladiator rollout restart deployment/sandbox-runner
+          kubectl -n codegladiator rollout restart deployment/frontend
