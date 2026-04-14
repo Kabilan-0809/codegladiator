@@ -2,7 +2,7 @@ import { query } from './db.js';
 import { publishEvent } from './events.js';
 import { logger } from './logger.js';
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 interface AnalysisData {
   challengeId: string;
@@ -26,7 +26,10 @@ interface AnalysisData {
   loserCode: string;
 }
 
-async function callClaude(data: AnalysisData): Promise<string> {
+async function callGemini(data: AnalysisData): Promise<string> {
+  const model = 'gemini-1.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
   const systemPrompt = 'You are a senior software engineer and competitive programming judge. You analyze code submissions that competed head-to-head. Be specific, technical, and fair. Format your response in Markdown.';
 
   const userPrompt = `Two solutions competed for the challenge: '${data.challengeTitle}'
@@ -62,27 +65,30 @@ Generate a structured analysis card with these exact sections:
 
 Be specific: cite actual code from both solutions. Mention Big-O complexity where relevant.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+      contents: [{
+        role: 'user',
+        parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
+      }],
+      generationConfig: {
+        maxOutputTokens: 4096,
+        temperature: 0.2,
+      }
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+    const errorBody = await response.text();
+    throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorBody}`);
   }
 
-  const result = await response.json() as { content: Array<{ text: string }> };
-  return result.content[0]?.text || '';
+  const result = await response.json() as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> };
+  return result.candidates[0]?.content.parts[0]?.text || '';
 }
 
 export async function generateWinAnalysis(challengeId: string): Promise<void> {
@@ -171,13 +177,13 @@ export async function generateWinAnalysis(challengeId: string): Promise<void> {
 
     for (let attempt = 0; attempt <= 3; attempt++) {
       try {
-        if (!ANTHROPIC_API_KEY) {
-          throw new Error('ANTHROPIC_API_KEY not set');
+        if (!GEMINI_API_KEY) {
+          throw new Error('GEMINI_API_KEY not set');
         }
-        analysis = await callClaude(analysisData);
+        analysis = await callGemini(analysisData);
         break;
       } catch (err) {
-        log.warn({ message: `Claude API attempt ${attempt + 1} failed`, error: String(err) });
+        log.warn({ message: `Gemini API attempt ${attempt + 1} failed`, error: String(err) });
         if (attempt < 3) {
           await new Promise((r) => setTimeout(r, delays[attempt]!));
         } else {

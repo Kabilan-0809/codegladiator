@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import { URL } from 'url';
 import jwt from 'jsonwebtoken';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from './logger.js';
 
@@ -30,8 +30,8 @@ const rooms = new Map<string, Set<ClientInfo>>();
 const redisSub = new Redis(REDIS_URL);
 const redisClient = new Redis(REDIS_URL);
 
-redisSub.on('error', (err) => logger.error({ message: 'Redis sub error', error: err.message }));
-redisClient.on('error', (err) => logger.error({ message: 'Redis client error', error: err.message }));
+redisSub.on('error', (err: Error) => logger.error({ message: 'Redis sub error', error: err.message }));
+redisClient.on('error', (err: Error) => logger.error({ message: 'Redis client error', error: err.message }));
 
 // HTTP server for health check
 const httpServer = http.createServer((req, res) => {
@@ -155,7 +155,7 @@ wss.on('connection', async (ws, req) => {
 });
 
 // Redis pub/sub subscriber
-redisSub.psubscribe('challenge:*:events', (err) => {
+redisSub.psubscribe('challenge:*:events', (err: Error | null | undefined) => {
   if (err) {
     logger.error({ message: 'Failed to subscribe to Redis events', error: err.message });
   } else {
@@ -163,7 +163,7 @@ redisSub.psubscribe('challenge:*:events', (err) => {
   }
 });
 
-redisSub.on('pmessage', (_pattern, channel, message) => {
+redisSub.on('pmessage', (_pattern: string, channel: string, message: string) => {
   // Parse challengeId from channel: challenge:{challengeId}:events
   const parts = channel.split(':');
   const challengeId = parts[1];

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { EditorView, basicSetup } from 'codemirror';
+import { EditorView } from '@codemirror/view';
+import { basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { python } from '@codemirror/lang-python';
 import { javascript } from '@codemirror/lang-javascript';

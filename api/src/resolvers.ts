@@ -1,28 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from './db.js';
 import { logger } from './logger.js';
-import { fingerprintFromSub, type AuthContext } from './auth.js';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { type AuthContext } from './auth.js';
+import { createClient } from '@supabase/supabase-js';
+import { redis } from './redis.js';
 
 const ALLOWED_LANGUAGES = ['python', 'javascript', 'go', 'rust', 'cpp'];
 const LANGUAGE_EXT: Record<string, string> = {
   python: 'py', javascript: 'js', go: 'go', rust: 'rs', cpp: 'cpp',
 };
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  endpoint: process.env.AWS_ENDPOINT,
-  forcePathStyle: true,
-});
-
-const sqs = new SQSClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  endpoint: process.env.AWS_ENDPOINT,
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
 const S3_BUCKET = process.env.S3_BUCKET || 'codegladiator-submissions';
-const EXECUTION_QUEUE_URL = process.env.EXECUTION_QUEUE_URL || 'http://localhost:4566/000000000000/execution-queue';
+const EXECUTION_QUEUE_NAME = 'execution-queue';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'change-me-admin-header-secret';
 
 function computeScore(passed: number, total: number, _runtimeMs: number, _memoryBytes: number): number {
@@ -225,35 +219,31 @@ export const resolvers = {
         [submissionId, challengeId, context.auth.fingerprint, context.auth.user.alias, language, code]
       );
 
-      // Upload code to S3
+      // Upload code to Supabase Storage
       const ext = LANGUAGE_EXT[language] || 'txt';
       const s3Key = `submissions/${challengeId}/${submissionId}.${ext}`;
       try {
-        await s3.send(new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: s3Key,
-          Body: code,
-          ContentType: 'text/plain',
-        }));
+        const { error } = await supabase.storage
+          .from(S3_BUCKET)
+          .upload(s3Key, code, { contentType: 'text/plain' });
+
+        if (error) throw error;
       } catch (err) {
-        log.error({ message: 'Failed to upload to S3', error: String(err) });
+        log.error({ message: 'Failed to upload to Supabase Storage', error: String(err) });
       }
 
-      // Send execution job to SQS
+      // Send execution job to Redis queue
       try {
-        await sqs.send(new SendMessageCommand({
-          QueueUrl: EXECUTION_QUEUE_URL,
-          MessageBody: JSON.stringify({
-            submissionId,
-            language,
-            code,
-            testCasesS3Key: challenge.test_cases_s3_key,
-            challengeId,
-          }),
+        await redis.lpush(EXECUTION_QUEUE_NAME, JSON.stringify({
+          submissionId,
+          language,
+          code,
+          testCasesS3Key: challenge.test_cases_s3_key,
+          challengeId,
         }));
-        log.info({ message: 'Execution job queued', submissionId });
+        log.info({ message: 'Execution job queued to Redis', submissionId });
       } catch (err) {
-        log.error({ message: 'Failed to queue execution job', error: String(err) });
+        log.error({ message: 'Failed to queue execution job to Redis', error: String(err) });
       }
 
       return {

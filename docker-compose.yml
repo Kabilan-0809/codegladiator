@@ -1,74 +1,27 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: gladiator
-      POSTGRES_PASSWORD: dev
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - '6379:6379'
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  localstack:
-    image: localstack/localstack:3
-    environment:
-      SERVICES: sqs,s3
-    ports:
-      - '4566:4566'
-    volumes:
-      - ./localstack-init.sh:/etc/localstack/init/ready.d/init.sh
-
   api:
     build: ./api
     ports:
       - '4000:4000'
     environment:
-      DATABASE_URL: postgres://postgres:dev@postgres:5432/gladiator
-      REDIS_URL: redis://redis:6379
-      AWS_ENDPOINT: http://localstack:4566
-      AWS_REGION: us-east-1
-      JWT_SECRET: local-dev-secret-change-me-32chars
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      S3_BUCKET: codegladiator-submissions
-      EXECUTION_QUEUE_URL: http://localstack:4566/000000000000/execution-queue
-      MATCH_QUEUE_URL: http://localstack:4566/000000000000/match-queue
-      ADMIN_SECRET: local-admin-secret
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      ADMIN_SECRET: ${ADMIN_SECRET}
       FRONTEND_ORIGIN: http://localhost:5173
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      localstack:
-        condition: service_started
 
   ws-server:
     build: ./ws-server
     ports:
       - '4001:4001'
     environment:
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: local-dev-secret-change-me-32chars
-    depends_on:
-      redis:
-        condition: service_healthy
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
 
   sandbox-runner:
     build: ./sandbox-runner
@@ -77,27 +30,20 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      AWS_ENDPOINT: http://localstack:4566
-      AWS_REGION: us-east-1
-      S3_BUCKET: codegladiator-submissions
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
 
   ladder-scheduler:
     build: ./ladder-scheduler
     environment:
-      DATABASE_URL: postgres://postgres:dev@postgres:5432/gladiator
-      REDIS_URL: redis://redis:6379
-      AWS_ENDPOINT: http://localstack:4566
-      AWS_REGION: us-east-1
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       SANDBOX_URL: http://sandbox-runner:3001
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      MATCH_QUEUE_URL: http://localstack:4566/000000000000/match-queue
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      sandbox-runner:
-        condition: service_started
+      - sandbox-runner
 
   frontend:
     build: ./frontend
@@ -106,6 +52,3 @@ services:
     environment:
       VITE_API_URL: http://localhost:4000/graphql
       VITE_WS_URL: ws://localhost:4001
-
-volumes:
-  postgres_data:

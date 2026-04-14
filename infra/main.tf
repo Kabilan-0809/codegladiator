@@ -362,7 +362,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
   secret_id = aws_secretsmanager_secret.app_secrets.id
   secret_string = jsonencode({
     JWT_SECRET      = var.jwt_secret
-    ANTHROPIC_API_KEY = var.anthropic_api_key
+    GEMINI_API_KEY = var.anthropic_api_key
     DATABASE_URL    = "postgres://postgres:${var.db_password}@${aws_db_instance.postgres.endpoint}/gladiator"
   })
 }

@@ -1,6 +1,6 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from './logger.js';
 import { ExecuteRequestSchema, TestCasesSchema } from './schemas.js';
 import { executeSubmission } from './executor.js';
@@ -11,11 +11,10 @@ app.use(express.json({ limit: '1mb' }));
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const startTime = Date.now();
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  endpoint: process.env.AWS_ENDPOINT,
-  forcePathStyle: true,
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
 const S3_BUCKET = process.env.S3_BUCKET || 'codegladiator-submissions';
 
@@ -41,18 +40,17 @@ app.post('/execute', async (req, res) => {
     const request = parsed.data;
     log.info({ message: 'Execute request received', submissionId: request.submissionId, language: request.language });
 
-    // Download test cases from S3
+    // Download test cases from Supabase Storage
     let testCasesRaw: string;
     try {
-      const s3Response = await s3.send(
-        new GetObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: request.testCasesS3Key,
-        })
-      );
-      testCasesRaw = await s3Response.Body!.transformToString('utf-8');
+      const { data, error } = await supabase.storage
+        .from(S3_BUCKET)
+        .download(request.testCasesS3Key);
+
+      if (error) throw error;
+      testCasesRaw = await data.text();
     } catch (err) {
-      log.error({ message: 'Failed to fetch test cases from S3', error: String(err) });
+      log.error({ message: 'Failed to fetch test cases from Supabase Storage', error: String(err) });
       res.status(500).json({ error: 'Failed to fetch test cases', requestId });
       return;
     }

@@ -21,7 +21,7 @@ interface ExecutionResponse {
 
 const SANDBOX_URL = process.env.SANDBOX_URL || 'http://localhost:3001';
 
-async function executeSubmission(
+export async function executeSubmission(
   submissionId: string,
   code: string,
   language: string,
@@ -47,7 +47,7 @@ async function executeSubmission(
   return response.json() as Promise<ExecutionResponse>;
 }
 
-function computeScore(result: ExecutionResponse): number {
+export function computeScore(result: ExecutionResponse): number {
   if (result.testCasesTotal === 0) return 0;
   return (result.testCasesPassed / result.testCasesTotal) * 100;
 }

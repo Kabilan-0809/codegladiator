@@ -1,5 +1,5 @@
 import Dockerode from 'dockerode';
-import { Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 import { logger } from './logger.js';
 import {
   type ExecuteRequest,
@@ -15,14 +15,7 @@ const MEMORY_LIMIT = 134_217_728; // 128MB
 const NANO_CPUS = 500_000_000; // 0.5 CPU
 const PIDS_LIMIT = 64;
 
-async function collectStream(stream: NodeJS.ReadableStream): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-    stream.on('error', reject);
-  });
-}
+// collectStream removed as it was unused
 
 async function runSingleTestCase(
   image: string,
@@ -69,7 +62,7 @@ async function runSingleTestCase(
 
   let peakMemoryBytes = 0;
   // Start monitoring memory in background
-  const statsPromise = (async () => {
+  (async () => {
     try {
       const statsStream = await container.stats({ stream: true }) as unknown as NodeJS.ReadableStream;
       const reader = new Readable().wrap(statsStream);
@@ -116,7 +109,6 @@ async function runSingleTestCase(
 
   // Get logs
   const logs = await container.logs({ stdout: true, stderr: true, follow: false });
-  const logStr = logs.toString('utf-8');
 
   // Demux stdout/stderr from Docker stream
   const stdout = demuxDockerStream(logs, 1);

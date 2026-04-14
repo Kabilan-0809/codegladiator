@@ -10,24 +10,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pg": "^8.11.3",
-    "ioredis": "^5.3.2",
-    "@aws-sdk/client-sqs": "^3.500.0",
-    "@aws-sdk/client-s3": "^3.500.0",
     "@anthropic-ai/sdk": "^0.14.0",
-    "winston": "^3.11.0",
+    "ioredis": "^5.3.2",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.11.3",
     "uuid": "^9.0.0",
-    "zod": "^3.22.4",
-    "node-fetch": "^3.3.2"
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/pg": "^8.10.9",
     "@types/uuid": "^9.0.7",
-    "typescript": "^5.3.3",
-    "tsx": "^4.7.0",
-    "eslint": "^8.56.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
-    "@typescript-eslint/parser": "^6.19.0"
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   }
 }

@@ -1,6 +1,6 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
-COPY package.json ./
+COPY package*.json ./
 RUN npm install
 COPY tsconfig.json vite.config.ts tailwind.config.js postcss.config.js index.html ./
 COPY src/ ./src/

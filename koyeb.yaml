@@ -1,0 +1,58 @@
+name: codegladiator
+services:
+  - name: api
+    type: web
+    image: node:20-slim
+    build:
+      dockerfile: api/Dockerfile
+    ports:
+      - port: 4000
+        protocol: http
+    env:
+      - key: DATABASE_URL
+        value: ${DATABASE_URL}
+      - key: REDIS_URL
+        value: ${REDIS_URL}
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+      - key: GEMINI_API_KEY
+        value: ${GEMINI_API_KEY}
+      - key: SUPABASE_URL
+        value: ${SUPABASE_URL}
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: ${SUPABASE_SERVICE_ROLE_KEY}
+      - key: ADMIN_SECRET
+        value: ${ADMIN_SECRET}
+
+  - name: ws-server
+    type: web
+    image: node:20-slim
+    build:
+      dockerfile: ws-server/Dockerfile
+    ports:
+      - port: 4001
+        protocol: http
+    env:
+      - key: REDIS_URL
+        value: ${REDIS_URL}
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+
+  - name: ladder-scheduler
+    type: worker
+    image: node:20-slim
+    build:
+      dockerfile: ladder-scheduler/Dockerfile
+    env:
+      - key: DATABASE_URL
+        value: ${DATABASE_URL}
+      - key: REDIS_URL
+        value: ${REDIS_URL}
+      - key: GEMINI_API_KEY
+        value: ${GEMINI_API_KEY}
+      - key: SUPABASE_URL
+        value: ${SUPABASE_URL}
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: ${SUPABASE_SERVICE_ROLE_KEY}
+      - key: SANDBOX_URL
+        value: http://sandbox-runner:3001
