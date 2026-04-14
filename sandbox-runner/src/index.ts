@@ -16,7 +16,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-const S3_BUCKET = process.env.S3_BUCKET || 'codegladiator-submissions';
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'codegladiator-submissions';
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -44,7 +44,7 @@ app.post('/execute', async (req, res) => {
     let testCasesRaw: string;
     try {
       const { data, error } = await supabase.storage
-        .from(S3_BUCKET)
+        .from(SUPABASE_BUCKET)
         .download(request.testCasesS3Key);
 
       if (error) throw error;

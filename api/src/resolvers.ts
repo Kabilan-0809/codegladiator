@@ -15,7 +15,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-const S3_BUCKET = process.env.S3_BUCKET || 'codegladiator-submissions';
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'codegladiator-submissions';
 const EXECUTION_QUEUE_NAME = 'execution-queue';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'change-me-admin-header-secret';
 
@@ -224,7 +224,7 @@ export const resolvers = {
       const s3Key = `submissions/${challengeId}/${submissionId}.${ext}`;
       try {
         const { error } = await supabase.storage
-          .from(S3_BUCKET)
+          .from(SUPABASE_BUCKET)
           .upload(s3Key, code, { contentType: 'text/plain' });
 
         if (error) throw error;

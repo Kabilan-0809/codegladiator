@@ -12,6 +12,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_BUCKET: ${SUPABASE_BUCKET}
       ADMIN_SECRET: ${ADMIN_SECRET}
       FRONTEND_ORIGIN: http://localhost:5173
 
@@ -32,6 +33,7 @@ services:
     environment:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_BUCKET: ${SUPABASE_BUCKET}
 
   ladder-scheduler:
     build: ./ladder-scheduler
