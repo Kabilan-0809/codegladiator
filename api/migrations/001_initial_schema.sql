@@ -44,10 +44,16 @@ CREATE TABLE IF NOT EXISTS submissions (
   execution_result_id UUID REFERENCES execution_results(id)
 );
 
--- Add foreign key from execution_results to submissions
-ALTER TABLE execution_results
-  ADD CONSTRAINT fk_execution_results_submission
-  FOREIGN KEY (submission_id) REFERENCES submissions(id);
+-- Add foreign key from execution_results to submissions safely
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_execution_results_submission') THEN
+        ALTER TABLE execution_results
+          ADD CONSTRAINT fk_execution_results_submission
+          FOREIGN KEY (submission_id) REFERENCES submissions(id);
+    END IF;
+END;
+$$;
 
 -- Bracket rounds table
 CREATE TABLE IF NOT EXISTS bracket_rounds (
