@@ -185,7 +185,7 @@ export default function ChallengePage() {
 
   // Initialize CodeMirror
   useEffect(() => {
-    if (!editorRef.current || viewRef.current) return;
+    if (loading || !editorRef.current || viewRef.current) return;
 
     const langExt = LANGUAGE_EXTENSIONS[language] || python;
     const state = EditorState.create({
@@ -202,7 +202,7 @@ export default function ChallengePage() {
       viewRef.current?.destroy();
       viewRef.current = null;
     };
-  }, []);
+  }, [loading, language]);
 
   // Update language extensions
   useEffect(() => {
